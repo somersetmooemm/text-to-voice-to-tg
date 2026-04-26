@@ -1,0 +1,5 @@
+python-dotenv
+pydantic-settings
+aiogram
+requests
+beautifulsoup4

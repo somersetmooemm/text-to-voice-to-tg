@@ -19,10 +19,10 @@ async def main():
     communicate = edge_tts.Communicate(
         text=text,
         voice="ru-RU-DmitryNeural",
-        rate="+0%",     # скорость
-        volume="+0%"    # громкость
+        rate="+0%",
+        volume="+0%"
     )
-    await communicate.save("speech.mp3")
+    await communicate.save("./result/speech.mp3")
 
 asyncio.run(main())
 
