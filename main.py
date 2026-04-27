@@ -1,29 +1,68 @@
 import asyncio
 import edge_tts
 import os
+import requests
+from bs4 import BeautifulSoup
+import subprocess
 
-text = """
-final в Java — это модификатор, который запрещает изменение.
+url = 'https://habr.com/ru/companies/avito/articles/1026786/'
+headers = {'User-Agent': 'Mozilla/5.0'}
 
-Если final применяется к переменной, её значение можно присвоить только один раз.
-Если к методу — его нельзя переопределить в дочерних классах.
-Если к классу — от него нельзя наследоваться.
+response = requests.get(url, headers=headers)
+soup = BeautifulSoup(response.text, 'html.parser')
 
-Для ссылочных типов final означает, что нельзя изменить саму ссылку,
-но можно изменять содержимое объекта.
+content = soup.find('div', id='post-content-body')
 
-Таким образом, final используется для фиксации поведения и защиты от изменений.
-"""
+text = ""
+if content:
+    for tag in content.find_all(['figure', 'script', 'style']):
+        tag.decompose()
+    text = content.get_text(separator='\n', strip=True)
 
-async def main():
-    communicate = edge_tts.Communicate(
-        text=text,
-        voice="ru-RU-DmitryNeural",
-        rate="+0%",
-        volume="+0%"
-    )
-    await communicate.save("./result/speech.mp3")
+def split_text(text, max_length=3000):
+    chunks = []
+    while text:
+        chunk = text[:max_length]
+        last_dot = chunk.rfind('.')
+        if last_dot != -1:
+            chunk = chunk[:last_dot+1]
+        chunks.append(chunk)
+        text = text[len(chunk):]
+    return chunks
 
-asyncio.run(main())
+async def generate_audio():
+    os.makedirs("./result", exist_ok=True)
+    chunks = split_text(text)
 
-os.startfile("speech.mp3")
+    for i, chunk in enumerate(chunks):
+        communicate = edge_tts.Communicate(
+            text=chunk,
+            voice="ru-RU-DmitryNeural"
+        )
+        await communicate.save(f"./result/part_{i}.mp3")
+
+def merge_audio_ffmpeg():
+    list_path = "./result/list.txt"
+
+    with open(list_path, "w", encoding="utf-8") as f:
+        i = 0
+        while True:
+            path = f"./result/part_{i}.mp3"
+            if not os.path.exists(path):
+                break
+            f.write(f"file '{path}'\n")
+            i += 1
+
+    subprocess.run([
+        "ffmpeg",
+        "-f", "concat",
+        "-safe", "0",
+        "-i", list_path,
+        "-c", "copy",
+        "./result/final.mp3"
+    ])
+
+asyncio.run(generate_audio())
+merge_audio_ffmpeg()
+
+os.startfile("./result/final.mp3")
