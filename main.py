@@ -5,6 +5,8 @@ import requests
 from bs4 import BeautifulSoup
 import subprocess
 
+BASE_DIR = os.path.abspath("./result")
+
 url = 'https://habr.com/ru/companies/avito/articles/1026786/'
 headers = {'User-Agent': 'Mozilla/5.0'}
 
@@ -31,7 +33,7 @@ def split_text(text, max_length=3000):
     return chunks
 
 async def generate_audio():
-    os.makedirs("./result", exist_ok=True)
+    os.makedirs(BASE_DIR, exist_ok=True)
     chunks = split_text(text)
 
     for i, chunk in enumerate(chunks):
@@ -39,15 +41,15 @@ async def generate_audio():
             text=chunk,
             voice="ru-RU-DmitryNeural"
         )
-        await communicate.save(f"./result/part_{i}.mp3")
+        await communicate.save(os.path.join(BASE_DIR, f"part_{i}.mp3"))
 
 def merge_audio_ffmpeg():
-    list_path = "./result/list.txt"
+    list_path = os.path.join(BASE_DIR, "list.txt")
 
     with open(list_path, "w", encoding="utf-8") as f:
         i = 0
         while True:
-            path = f"./result/part_{i}.mp3"
+            path = os.path.join(BASE_DIR, f"part_{i}.mp3")
             if not os.path.exists(path):
                 break
             f.write(f"file '{path}'\n")
@@ -59,10 +61,10 @@ def merge_audio_ffmpeg():
         "-safe", "0",
         "-i", list_path,
         "-c", "copy",
-        "./result/final.mp3"
-    ])
+        os.path.join(BASE_DIR, "final.mp3")
+    ], check=True)
 
-asyncio.run(generate_audio())
+#asyncio.run(generate_audio())
 merge_audio_ffmpeg()
 
-os.startfile("./result/final.mp3")
+os.startfile(os.path.join(BASE_DIR, "final.mp3"))
