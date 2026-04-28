@@ -7,70 +7,19 @@ import edge_tts
 import requests
 from bs4 import BeautifulSoup
 
+import cleaner_text
+from paper import Paper
+
 # ──────────────────────────────────────────────
 # Настройки
 # ──────────────────────────────────────────────
 URL = "https://habr.com/ru/companies/amvera/articles/851642/"
-VOICE = "ru-RU-DmitryNeural"  # или "ru-RU-SvetlanaNeural"
+VOICE = "ru-RU-DmitryNeural"
 BASE_DIR = Path("./result")
 MAX_CHUNK_LEN = 3000
 MAX_PARALLEL = 5
 RETRIES = 3
-
 HEADERS = {"User-Agent": "Mozilla/5.0"}
-
-
-# ──────────────────────────────────────────────
-# 1. Парсинг статьи
-# ──────────────────────────────────────────────
-def fetch_text(url: str) -> str:
-    response = requests.get(url, headers=HEADERS, timeout=15)
-    response.raise_for_status()
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    content = soup.find("div", id="post-content-body")
-    if not content:
-        raise RuntimeError("Не удалось найти контент статьи на странице.")
-
-    for tag in content.find_all(["figure", "script", "style", "code", "pre"]):
-        tag.decompose()
-
-    return content.get_text(separator="\n", strip=True)
-
-
-# ──────────────────────────────────────────────
-# 2. Предобработка текста
-# ──────────────────────────────────────────────
-ABBREVIATIONS = {
-    "т.е.": "то есть",
-    "т.к.": "так как",
-    "и т.д.": "и так далее",
-    "и т.п.": "и тому подобное",
-    "др.": "другие",
-    "руб.": "рублей",
-    "млн.": "миллионов",
-    "млрд.": "миллиардов",
-    "гг.": "годах",
-    "г.": "года",
-    "пр.": "прочее",
-}
-
-
-def clean_text(text: str) -> str:
-    # Убираем URL
-    text = re.sub(r"https?://\S+", "", text)
-    # Убираем markdown-разметку
-    text = re.sub(r"[*_`#~>]", "", text)
-    # Схлопываем множественные пустые строки
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    # Убираем строки только из цифр и спецсимволов (мусор после парсинга)
-    text = re.sub(r"(?m)^[\d\W]+$", "", text)
-    # Раскрываем сокращения
-    for abbr, full in ABBREVIATIONS.items():
-        text = text.replace(abbr, full)
-    # Убираем лишние пробелы
-    text = re.sub(r" {2,}", " ", text)
-    return text.strip()
 
 
 # ──────────────────────────────────────────────
@@ -184,10 +133,9 @@ def merge_audio_ffmpeg(out_dir: Path = BASE_DIR) -> Path:
 # ──────────────────────────────────────────────
 def main() -> None:
     print("Загружаем статью...")
-    raw_text = fetch_text(URL)
-
-    print("Очищаем текст...")
-    text = clean_text(raw_text)
+    paper = Paper("https://example.com")
+    paper.fetch_text()
+    text_paper = cleaner_text.Cleaner_text.clean_text(paper.text)
 
     print("Разбиваем на чанки...")
     chunks = split_text(text)
