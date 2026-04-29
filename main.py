@@ -4,8 +4,6 @@ import subprocess
 from pathlib import Path
 
 import edge_tts
-import requests
-from bs4 import BeautifulSoup
 
 import cleaner_text
 from paper import Paper
@@ -13,13 +11,12 @@ from paper import Paper
 # ──────────────────────────────────────────────
 # Настройки
 # ──────────────────────────────────────────────
-URL = "https://habr.com/ru/companies/amvera/articles/851642/"
+URL = "https://habr.com/p/599339/"
 VOICE = "ru-RU-DmitryNeural"
 BASE_DIR = Path("./result")
 MAX_CHUNK_LEN = 3000
 MAX_PARALLEL = 5
 RETRIES = 3
-HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 
 # ──────────────────────────────────────────────
@@ -132,13 +129,12 @@ def merge_audio_ffmpeg(out_dir: Path = BASE_DIR) -> Path:
 # 6. Точка входа
 # ──────────────────────────────────────────────
 def main() -> None:
-    print("Загружаем статью...")
-    paper = Paper("https://example.com")
+    paper = Paper(URL)
     paper.fetch_text()
     text_paper = cleaner_text.Cleaner_text.clean_text(paper.text)
 
     print("Разбиваем на чанки...")
-    chunks = split_text(text)
+    chunks = split_text(text_paper)
     print(f"  Всего чанков: {len(chunks)}")
 
     print("Генерируем аудио...")
